@@ -9,6 +9,9 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: "autoUpdate",
+      devOptions: {
+        enabled: true,
+      },
       includeAssets: ["favicon.svg", "pwa-192x192.png", "pwa-512x512.png"],
       manifest: {
         name: "WedangNusa — Panduan Minuman Rempah Nusantara",
@@ -18,7 +21,7 @@ export default defineConfig({
         theme_color: "#7C2D12",
         background_color: "#FFFBF5",
         display: "standalone",
-        orientation: "portrait",
+        orientation: "any",
         scope: "/",
         start_url: "/",
         icons: [
@@ -44,13 +47,17 @@ export default defineConfig({
         globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
         runtimeCaching: [
           {
-            urlPattern: ({ url }) => url.pathname.startsWith("/api/"),
+            urlPattern: /\/api\//i,
             handler: "NetworkFirst",
             options: {
               cacheName: "wedangnusa-api-cache",
+              networkTimeoutSeconds: 5,
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
               expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24,
+                maxEntries: 60,
+                maxAgeSeconds: 60 * 60 * 24 * 7,
               },
             },
           },
@@ -59,9 +66,12 @@ export default defineConfig({
             handler: "CacheFirst",
             options: {
               cacheName: "wedangnusa-image-cache",
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
               expiration: {
                 maxEntries: 60,
-                maxAgeSeconds: 60 * 60 * 24 * 7,
+                maxAgeSeconds: 60 * 60 * 24 * 14,
               },
             },
           },
