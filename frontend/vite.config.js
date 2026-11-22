@@ -44,14 +44,19 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
+        navigateFallback: "/index.html",
+        navigateFallbackDenylist: [/^\/api/],
         runtimeCaching: [
           {
             urlPattern: /\/api\//i,
             handler: "NetworkFirst",
             options: {
               cacheName: "wedangnusa-api-cache",
-              networkTimeoutSeconds: 5,
+              networkTimeoutSeconds: 4,
               cacheableResponse: {
                 statuses: [0, 200],
               },

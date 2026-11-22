@@ -7,32 +7,36 @@ import {
   FlaskConical,
   HeartPulse,
   Coffee,
-  AlertCircle,
 } from "lucide-react";
 import { WedangApi } from "../services/api";
+import { useOnlineStatus } from "../hooks/useOnlineStatus";
+import FavoriteButton from "../components/FavoriteButton";
+import OfflineNotice from "../components/OfflineNotice";
 
 export default function SpiceDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const isOnline = useOnlineStatus();
   const [spice, setSpice] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const loadDetail = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await WedangApi.getSpiceById(id);
+      setSpice(data);
+    } catch (err) {
+      setError(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const loadDetail = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await WedangApi.getSpiceById(id);
-        setSpice(data);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
     loadDetail();
-  }, [id]);
+  }, [id, isOnline]);
 
   if (loading) {
     return (
@@ -46,18 +50,24 @@ export default function SpiceDetailPage() {
 
   if (error || !spice) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-[#FFFBF5] p-6 text-center">
-        <AlertCircle className="h-10 w-10 text-red-500" />
-        <p className="mt-2 font-semibold text-stone-800">
-          Detail bahan rempah tidak ditemukan
-        </p>
-        <p className="mt-1 text-xs text-stone-500">{error}</p>
+      <div className="flex min-h-screen flex-col items-center justify-center bg-[#FFFBF5] px-5 pb-24">
+        <OfflineNotice
+          isOffline={!isOnline || Boolean(error?.isOffline)}
+          title="Detail Rempah Belum Tersimpan Offline"
+          message={
+            !isOnline || error?.isOffline
+              ? "Halaman detail rempah ini belum pernah dibuka saat online. Data akan otomatis dimuat ketika koneksi internet kembali aktif."
+              : error?.message || "Detail bahan rempah tidak ditemukan."
+          }
+          onRetry={loadDetail}
+          accent="emerald"
+        />
         <button
           type="button"
           onClick={() => navigate(-1)}
-          className="mt-4 cursor-pointer rounded-xl bg-emerald-800 px-5 py-2.5 text-xs font-semibold text-white"
+          className="mt-4 inline-flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-emerald-900 hover:underline"
         >
-          Kembali
+          <ArrowLeft className="h-4 w-4" /> Kembali ke halaman sebelumnya
         </button>
       </div>
     );
@@ -74,7 +84,6 @@ export default function SpiceDetailPage() {
           <ArrowLeft className="h-4 w-4" /> Kembali ke Katalog Rempah
         </button>
 
-        {/* Hero Image */}
         <div className="relative h-60 w-full overflow-hidden md:h-72 md:rounded-3xl md:shadow-md">
           <img
             src={spice.image_url}
@@ -92,6 +101,12 @@ export default function SpiceDetailPage() {
             <ArrowLeft className="h-5 w-5" />
           </button>
 
+          <FavoriteButton
+            type="spice"
+            item={spice}
+            className="absolute top-4 right-4 h-10 w-10 shadow-md"
+          />
+
           <div className="absolute right-5 bottom-4 left-5 text-white md:right-8 md:bottom-6 md:left-8">
             <p className="text-xs italic text-emerald-200 md:text-sm">
               {spice.scientific_name}
@@ -105,7 +120,6 @@ export default function SpiceDetailPage() {
           </div>
         </div>
 
-        {/* Grid 2 Kolom di Desktop */}
         <main className="grid grid-cols-1 gap-4 px-5 pt-5 md:grid-cols-12 md:gap-6 md:px-0 md:pt-6">
           <div className="space-y-4 md:col-span-5">
             <div className="grid grid-cols-2 gap-3">

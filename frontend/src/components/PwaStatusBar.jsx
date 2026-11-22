@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
 import { Download, WifiOff, X } from "lucide-react";
+import { useOnlineStatus } from "../hooks/useOnlineStatus";
 
 export default function PwaStatusBar() {
-  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const isOnline = useOnlineStatus();
   const [installPrompt, setInstallPrompt] = useState(null);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    const handleOnline = () => setIsOffline(false);
-    const handleOffline = () => setIsOffline(true);
     const handleBeforeInstall = (e) => {
       e.preventDefault();
       setInstallPrompt(e);
@@ -17,14 +16,10 @@ export default function PwaStatusBar() {
       setInstallPrompt(null);
     };
 
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
     window.addEventListener("beforeinstallprompt", handleBeforeInstall);
     window.addEventListener("appinstalled", handleInstalled);
 
     return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
       window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
       window.removeEventListener("appinstalled", handleInstalled);
     };
@@ -41,10 +36,13 @@ export default function PwaStatusBar() {
 
   return (
     <>
-      {isOffline && (
-        <div className="sticky top-0 z-50 flex items-center justify-center gap-2 bg-stone-900 px-4 py-2 text-xs font-medium text-amber-200">
+      {!isOnline && (
+        <div className="sticky top-0 z-50 flex items-center justify-center gap-2 bg-stone-900 px-4 py-2 text-center text-xs font-medium text-amber-200 shadow-sm">
           <WifiOff className="h-3.5 w-3.5 shrink-0" />
-          <span>Mode Offline Aktif — Menampilkan data yang tersimpan</span>
+          <span>
+            Mode Offline — Tampilan tetap aktif. Data terbaru akan dimuat saat
+            kembali online.
+          </span>
         </div>
       )}
 
@@ -53,7 +51,7 @@ export default function PwaStatusBar() {
           <button
             type="button"
             onClick={triggerInstall}
-            className="flex items-center gap-2 cursor-pointer"
+            className="flex cursor-pointer items-center gap-2"
           >
             <Download className="h-4 w-4 text-amber-300" />
             <span>Install WedangNusa</span>
@@ -62,7 +60,7 @@ export default function PwaStatusBar() {
             type="button"
             onClick={() => setDismissed(true)}
             aria-label="Tutup banner install"
-            className="rounded-full p-1 text-amber-200 hover:bg-amber-800"
+            className="cursor-pointer rounded-full p-1 text-amber-200 hover:bg-amber-800"
           >
             <X className="h-3.5 w-3.5" />
           </button>

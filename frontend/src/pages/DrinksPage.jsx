@@ -1,20 +1,17 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  Search,
-  MapPin,
-  Flame,
-  Snowflake,
-  AlertCircle,
-  RefreshCw,
-} from "lucide-react";
+import { Search, MapPin, Flame, Snowflake } from "lucide-react";
 import { WedangApi } from "../services/api";
+import { useOnlineStatus } from "../hooks/useOnlineStatus";
 import Pagination from "../components/Pagination";
+import FavoriteButton from "../components/FavoriteButton";
+import OfflineNotice from "../components/OfflineNotice";
 
 const SERVING_FILTERS = ["Semua", "Hangat", "Dingin"];
 const ITEMS_PER_PAGE = 6;
 
 export default function DrinksPage() {
+  const isOnline = useOnlineStatus();
   const [drinks, setDrinks] = useState([]);
   const [search, setSearch] = useState("");
   const [serving, setServing] = useState("Semua");
@@ -45,7 +42,7 @@ export default function DrinksPage() {
       setDrinks(result.data);
       setPagination(result.pagination);
     } catch (err) {
-      setError(err.message);
+      setError(err);
     } finally {
       setLoading(false);
     }
@@ -56,7 +53,7 @@ export default function DrinksPage() {
       loadDrinks(search, serving, page);
     }, 200);
     return () => clearTimeout(timer);
-  }, [search, serving, page]);
+  }, [search, serving, page, isOnline]);
 
   const handleSearchChange = (e) => {
     setSearch(e.target.value);
@@ -74,7 +71,6 @@ export default function DrinksPage() {
 
   return (
     <div className="min-h-screen bg-[#FFFBF5] pb-24 md:pb-28">
-      {/* Hero Header */}
       <header className="rounded-b-3xl bg-gradient-to-br from-amber-900 via-amber-800 to-orange-800 text-amber-50 shadow-md">
         <div className="mx-auto max-w-6xl px-5 pt-7 pb-6 md:flex md:items-end md:justify-between md:gap-8 md:px-8 md:py-10">
           <div className="max-w-xl">
@@ -103,9 +99,7 @@ export default function DrinksPage() {
         </div>
       </header>
 
-      {/* Container Utama */}
       <div className="mx-auto max-w-6xl px-5 md:px-8">
-        {/* Filter Pills */}
         <div className="flex flex-wrap items-center justify-between gap-3 pt-5">
           <div className="flex items-center gap-2">
             {SERVING_FILTERS.map((item) => (
@@ -131,7 +125,6 @@ export default function DrinksPage() {
           )}
         </div>
 
-        {/* Grid / List Minuman */}
         <main className="pt-4 md:pt-6">
           {loading ? (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -143,20 +136,17 @@ export default function DrinksPage() {
               ))}
             </div>
           ) : error ? (
-            <div className="mx-auto max-w-md rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
-              <AlertCircle className="mx-auto h-8 w-8 text-red-500" />
-              <p className="mt-2 text-sm font-semibold text-red-800">
-                Gagal terhubung ke API
-              </p>
-              <p className="mt-1 text-xs text-red-600">{error}</p>
-              <button
-                type="button"
-                onClick={() => loadDrinks()}
-                className="mt-3 inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-xs font-semibold text-white"
-              >
-                <RefreshCw className="h-3.5 w-3.5" /> Coba Lagi
-              </button>
-            </div>
+            <OfflineNotice
+              isOffline={!isOnline || Boolean(error.isOffline)}
+              title="Daftar Minuman Belum Tersedia Offline"
+              message={
+                !isOnline || error.isOffline
+                  ? "Tampilan aplikasi tetap dapat digunakan, namun halaman daftar minuman ini belum tersimpan di cache. Data akan dimuat otomatis saat perangkat kembali online."
+                  : error.message
+              }
+              onRetry={() => loadDrinks()}
+              accent="amber"
+            />
           ) : drinks.length === 0 ? (
             <div className="rounded-2xl border border-amber-200/70 bg-white p-10 text-center">
               <p className="text-sm font-semibold text-stone-700">
@@ -181,6 +171,11 @@ export default function DrinksPage() {
                         alt={drink.name}
                         loading="lazy"
                         className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                      <FavoriteButton
+                        type="drink"
+                        item={drink}
+                        className="absolute top-2 right-2"
                       />
                     </div>
                     <div className="flex flex-1 flex-col justify-between p-3.5 md:p-5">

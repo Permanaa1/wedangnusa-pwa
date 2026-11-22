@@ -7,32 +7,36 @@ import {
   ListChecks,
   ChefHat,
   HeartPulse,
-  AlertCircle,
 } from "lucide-react";
 import { WedangApi } from "../services/api";
+import { useOnlineStatus } from "../hooks/useOnlineStatus";
+import FavoriteButton from "../components/FavoriteButton";
+import OfflineNotice from "../components/OfflineNotice";
 
 export default function DrinkDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const isOnline = useOnlineStatus();
   const [drink, setDrink] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const loadDetail = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await WedangApi.getDrinkById(id);
+      setDrink(data);
+    } catch (err) {
+      setError(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const loadDetail = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await WedangApi.getDrinkById(id);
-        setDrink(data);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
     loadDetail();
-  }, [id]);
+  }, [id, isOnline]);
 
   if (loading) {
     return (
@@ -46,18 +50,24 @@ export default function DrinkDetailPage() {
 
   if (error || !drink) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-[#FFFBF5] p-6 text-center">
-        <AlertCircle className="h-10 w-10 text-red-500" />
-        <p className="mt-2 font-semibold text-stone-800">
-          Detail minuman tidak ditemukan
-        </p>
-        <p className="mt-1 text-xs text-stone-500">{error}</p>
+      <div className="flex min-h-screen flex-col items-center justify-center bg-[#FFFBF5] px-5 pb-24">
+        <OfflineNotice
+          isOffline={!isOnline || Boolean(error?.isOffline)}
+          title="Detail Minuman Belum Tersimpan Offline"
+          message={
+            !isOnline || error?.isOffline
+              ? "Halaman detail minuman ini belum pernah dibuka saat online. Data akan otomatis dimuat ketika koneksi internet kembali aktif."
+              : error?.message || "Detail minuman tidak ditemukan."
+          }
+          onRetry={loadDetail}
+          accent="amber"
+        />
         <button
           type="button"
           onClick={() => navigate(-1)}
-          className="mt-4 cursor-pointer rounded-xl bg-amber-800 px-5 py-2.5 text-xs font-semibold text-white"
+          className="mt-4 inline-flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-amber-900 hover:underline"
         >
-          Kembali
+          <ArrowLeft className="h-4 w-4" /> Kembali ke halaman sebelumnya
         </button>
       </div>
     );
@@ -66,7 +76,6 @@ export default function DrinkDetailPage() {
   return (
     <div className="min-h-screen bg-[#FFFBF5] pb-24 md:pb-28">
       <div className="mx-auto max-w-5xl md:px-8 md:pt-8">
-        {/* Tombol Kembali Desktop */}
         <button
           type="button"
           onClick={() => navigate(-1)}
@@ -75,7 +84,6 @@ export default function DrinkDetailPage() {
           <ArrowLeft className="h-4 w-4" /> Kembali ke Daftar Minuman
         </button>
 
-        {/* Hero Image */}
         <div className="relative h-64 w-full overflow-hidden md:h-80 md:rounded-3xl md:shadow-md">
           <img
             src={drink.image_url}
@@ -92,6 +100,12 @@ export default function DrinkDetailPage() {
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
+
+          <FavoriteButton
+            type="drink"
+            item={drink}
+            className="absolute top-4 right-4 h-10 w-10 shadow-md"
+          />
 
           <div className="absolute right-5 bottom-4 left-5 text-white md:right-8 md:bottom-6 md:left-8">
             <span className="inline-block rounded-full bg-amber-600/90 px-3 py-0.5 text-[11px] font-semibold md:text-xs">
@@ -111,9 +125,7 @@ export default function DrinkDetailPage() {
           </div>
         </div>
 
-        {/* Grid 2 Kolom di Desktop */}
         <main className="grid grid-cols-1 gap-4 px-5 pt-5 md:grid-cols-12 md:gap-6 md:px-0 md:pt-6">
-          {/* Kolom Kiri */}
           <div className="space-y-4 md:col-span-5">
             <section className="rounded-2xl border border-amber-200/70 bg-white p-4 shadow-sm md:p-5">
               <h2 className="text-sm font-bold text-amber-950 md:text-base">
@@ -145,7 +157,6 @@ export default function DrinkDetailPage() {
             </section>
           </div>
 
-          {/* Kolom Kanan */}
           <div className="space-y-4 md:col-span-7">
             <section className="rounded-2xl border border-amber-200/70 bg-white p-4 shadow-sm md:p-5">
               <div className="flex items-center gap-2">

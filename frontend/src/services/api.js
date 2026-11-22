@@ -1,15 +1,11 @@
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
-const CACHE_KEYS = {
-  drinks: "wedangnusa_drinks_offline",
-  spices: "wedangnusa_spices_offline",
-  meta: "wedangnusa_offline_meta",
-};
+const CACHE_PREFIX = "wedangnusa_api_v2:";
 
 function readCache(key) {
   try {
-    const raw = localStorage.getItem(key);
+    const raw = localStorage.getItem(CACHE_PREFIX + key);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -18,39 +14,37 @@ function readCache(key) {
 
 function writeCache(key, value) {
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    localStorage.setItem(CACHE_PREFIX + key, JSON.stringify(value));
   } catch {
-    // Abaikan jika kuota penyimpanan penuh
+    // Abaikan jika kuota penyimpanan browser penuh
   }
 }
 
-function paginateLocal(items, page, limit) {
-  const totalItems = items.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / limit));
-  const safePage = Math.min(Math.max(1, page), totalPages);
-  const start = (safePage - 1) * limit;
-
-  return {
-    data: items.slice(start, start + limit),
-    pagination: {
-      page: safePage,
-      limit,
-      totalItems,
-      totalPages,
-    },
-  };
+function createOfflineError() {
+  const err = new Error(
+    "Koneksi terputus. Data akan dimuat otomatis saat Anda kembali online."
+  );
+  err.isOffline = true;
+  return err;
 }
 
 async function fetchApi(endpoint) {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`);
-  if (!response.ok) {
-    throw new Error(`Request gagal (${response.status})`);
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`);
+    if (!response.ok) {
+      throw new Error(`Request gagal (${response.status})`);
+    }
+    const json = await response.json();
+    if (!json.success) {
+      throw new Error(json.message || "Gagal memuat data");
+    }
+    return json;
+  } catch (err) {
+    if (!navigator.onLine) {
+      throw createOfflineError();
+    }
+    throw err;
   }
-  const json = await response.json();
-  if (!json.success) {
-    throw new Error(json.message || "Gagal memuat data");
-  }
-  return json;
 }
 
 export const WedangApi = {
@@ -63,17 +57,11 @@ export const WedangApi = {
     params.append("page", String(page));
     params.append("limit", String(limit));
 
+    const queryKey = `drinks:${params.toString()}`;
+
     try {
       const json = await fetchApi(`/drinks?${params.toString()}`);
-
-      // Sinkronisasi cache penuh sekali di latar belakang jika belum ada
-      if (!readCache(CACHE_KEYS.drinks)) {
-        fetchApi("/drinks")
-          .then((all) => writeCache(CACHE_KEYS.drinks, all.data))
-          .catch(() => {});
-      }
-
-      return {
+      const result = {
         data: json.data,
         pagination: json.pagination ?? {
           page,
@@ -82,32 +70,25 @@ export const WedangApi = {
           totalPages: 1,
         },
       };
+      writeCache(queryKey, result);
+      json.data.forEach((item) => writeCache(`drink:${item.id}`, item));
+      return result;
     } catch (err) {
-      const cached = readCache(CACHE_KEYS.drinks);
-      if (cached) {
-        const filtered = cached.filter((item) => {
-          const matchSearch =
-            !search.trim() ||
-            item.name.toLowerCase().includes(search.trim().toLowerCase());
-          const matchServing =
-            serving === "Semua" ||
-            item.serving_type.toLowerCase().includes(serving.toLowerCase());
-          return matchSearch && matchServing;
-        });
-        return paginateLocal(filtered, page, limit);
-      }
+      const cached = readCache(queryKey);
+      if (cached) return { ...cached, fromCache: true };
       throw err;
     }
   },
 
   async getDrinkById(id) {
+    const cacheKey = `drink:${id}`;
     try {
       const json = await fetchApi(`/drinks/${id}`);
+      writeCache(cacheKey, json.data);
       return json.data;
     } catch (err) {
-      const cached = readCache(CACHE_KEYS.drinks);
-      const found = cached?.find((item) => String(item.id) === String(id));
-      if (found) return found;
+      const cached = readCache(cacheKey);
+      if (cached) return cached;
       throw err;
     }
   },
@@ -118,16 +99,11 @@ export const WedangApi = {
     params.append("page", String(page));
     params.append("limit", String(limit));
 
+    const queryKey = `spices:${params.toString()}`;
+
     try {
       const json = await fetchApi(`/spices?${params.toString()}`);
-
-      if (!readCache(CACHE_KEYS.spices)) {
-        fetchApi("/spices")
-          .then((all) => writeCache(CACHE_KEYS.spices, all.data))
-          .catch(() => {});
-      }
-
-      return {
+      const result = {
         data: json.data,
         pagination: json.pagination ?? {
           page,
@@ -136,66 +112,76 @@ export const WedangApi = {
           totalPages: 1,
         },
       };
+      writeCache(queryKey, result);
+      json.data.forEach((item) => writeCache(`spice:${item.id}`, item));
+      return result;
     } catch (err) {
-      const cached = readCache(CACHE_KEYS.spices);
-      if (cached) {
-        const filtered = cached.filter(
-          (item) =>
-            !search.trim() ||
-            item.name.toLowerCase().includes(search.trim().toLowerCase())
-        );
-        return paginateLocal(filtered, page, limit);
-      }
+      const cached = readCache(queryKey);
+      if (cached) return { ...cached, fromCache: true };
       throw err;
     }
   },
 
   async getSpiceById(id) {
+    const cacheKey = `spice:${id}`;
     try {
       const json = await fetchApi(`/spices/${id}`);
+      writeCache(cacheKey, json.data);
       return json.data;
     } catch (err) {
-      const cached = readCache(CACHE_KEYS.spices);
-      const found = cached?.find((item) => String(item.id) === String(id));
-      if (found) return found;
+      const cached = readCache(cacheKey);
+      if (cached) return cached;
       throw err;
     }
   },
 
-  // Unduh seluruh data API & gambar ke cache agar siap dipakai offline
-  async downloadAllForOffline() {
-    const [drinksRes, spicesRes] = await Promise.all([
-      fetchApi("/drinks"),
-      fetchApi("/spices"),
-    ]);
-
-    const drinks = drinksRes.data;
-    const spices = spicesRes.data;
-
-    writeCache(CACHE_KEYS.drinks, drinks);
-    writeCache(CACHE_KEYS.spices, spices);
-
-    const imageUrls = [
-      ...new Set([
-        ...drinks.map((d) => d.image_url),
-        ...spices.map((s) => s.image_url),
-      ]),
-    ];
-
-    await Promise.allSettled(
-      imageUrls.map((url) => fetch(url, { mode: "no-cors" }))
-    );
-
-    const meta = {
-      syncedAt: new Date().toISOString(),
-      drinksCount: drinks.length,
-      spicesCount: spices.length,
-    };
-    writeCache(CACHE_KEYS.meta, meta);
-    return meta;
+  async getAllDrinks() {
+    const cacheKey = "drinks:all";
+    try {
+      const json = await fetchApi("/drinks");
+      writeCache(cacheKey, json.data);
+      json.data.forEach((item) => writeCache(`drink:${item.id}`, item));
+      return json.data;
+    } catch (err) {
+      const cached = readCache(cacheKey);
+      if (cached) return cached;
+      throw err;
+    }
   },
 
-  getOfflineMeta() {
-    return readCache(CACHE_KEYS.meta);
+  async getAllSpices() {
+    const cacheKey = "spices:all";
+    try {
+      const json = await fetchApi("/spices");
+      writeCache(cacheKey, json.data);
+      json.data.forEach((item) => writeCache(`spice:${item.id}`, item));
+      return json.data;
+    } catch (err) {
+      const cached = readCache(cacheKey);
+      if (cached) return cached;
+      throw err;
+    }
+  },
+
+  clearApiCache() {
+    try {
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith(CACHE_PREFIX)) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch {
+      // Abaikan
+    }
+  },
+
+  getCachedEntryCount() {
+    try {
+      return Object.keys(localStorage).filter((key) =>
+        key.startsWith(CACHE_PREFIX)
+      ).length;
+    } catch {
+      return 0;
+    }
   },
 };

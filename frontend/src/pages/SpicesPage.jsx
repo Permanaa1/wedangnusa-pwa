@@ -1,12 +1,16 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Search, Wind, AlertCircle, RefreshCw } from "lucide-react";
+import { Search, Wind } from "lucide-react";
 import { WedangApi } from "../services/api";
+import { useOnlineStatus } from "../hooks/useOnlineStatus";
 import Pagination from "../components/Pagination";
+import FavoriteButton from "../components/FavoriteButton";
+import OfflineNotice from "../components/OfflineNotice";
 
 const ITEMS_PER_PAGE = 8;
 
 export default function SpicesPage() {
+  const isOnline = useOnlineStatus();
   const [spices, setSpices] = useState([]);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -31,7 +35,7 @@ export default function SpicesPage() {
       setSpices(result.data);
       setPagination(result.pagination);
     } catch (err) {
-      setError(err.message);
+      setError(err);
     } finally {
       setLoading(false);
     }
@@ -42,7 +46,7 @@ export default function SpicesPage() {
       loadSpices(search, page);
     }, 200);
     return () => clearTimeout(timer);
-  }, [search, page]);
+  }, [search, page, isOnline]);
 
   const handleSearchChange = (e) => {
     setSearch(e.target.value);
@@ -55,7 +59,6 @@ export default function SpicesPage() {
 
   return (
     <div className="min-h-screen bg-[#FFFBF5] pb-24 md:pb-28">
-      {/* Header */}
       <header className="rounded-b-3xl bg-gradient-to-br from-emerald-900 via-emerald-800 to-teal-800 text-emerald-50 shadow-md">
         <div className="mx-auto max-w-6xl px-5 pt-7 pb-6 md:flex md:items-end md:justify-between md:gap-8 md:px-8 md:py-10">
           <div className="max-w-xl">
@@ -84,7 +87,6 @@ export default function SpicesPage() {
         </div>
       </header>
 
-      {/* Grid List Rempah */}
       <main className="mx-auto max-w-6xl px-5 pt-5 md:px-8 md:pt-7">
         {!loading && !error && pagination.totalItems > 0 && (
           <p className="mb-4 text-xs font-medium text-stone-500">
@@ -103,20 +105,17 @@ export default function SpicesPage() {
             ))}
           </div>
         ) : error ? (
-          <div className="mx-auto max-w-md rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
-            <AlertCircle className="mx-auto h-8 w-8 text-red-500" />
-            <p className="mt-2 text-sm font-semibold text-red-800">
-              Gagal memuat katalog rempah
-            </p>
-            <p className="mt-1 text-xs text-red-600">{error}</p>
-            <button
-              type="button"
-              onClick={() => loadSpices()}
-              className="mt-3 inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-xs font-semibold text-white"
-            >
-              <RefreshCw className="h-3.5 w-3.5" /> Coba Lagi
-            </button>
-          </div>
+          <OfflineNotice
+            isOffline={!isOnline || Boolean(error.isOffline)}
+            title="Katalog Rempah Belum Tersedia Offline"
+            message={
+              !isOnline || error.isOffline
+                ? "Tampilan aplikasi tetap dapat diakses, namun data katalog rempah halaman ini belum tersimpan di cache. Data akan dimuat otomatis saat online kembali."
+                : error.message
+            }
+            onRetry={() => loadSpices()}
+            accent="emerald"
+          />
         ) : spices.length === 0 ? (
           <div className="rounded-2xl border border-emerald-200/70 bg-white p-10 text-center">
             <p className="text-sm font-semibold text-stone-700">
@@ -132,12 +131,17 @@ export default function SpicesPage() {
                   to={`/spices/${spice.id}`}
                   className="group flex flex-col overflow-hidden rounded-2xl border border-emerald-200/70 bg-white shadow-sm transition-all hover:border-emerald-300 hover:shadow-md active:scale-[0.98]"
                 >
-                  <div className="h-32 w-full overflow-hidden md:h-40">
+                  <div className="relative h-32 w-full overflow-hidden md:h-40">
                     <img
                       src={spice.image_url}
                       alt={spice.name}
                       loading="lazy"
                       className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                    <FavoriteButton
+                      type="spice"
+                      item={spice}
+                      className="absolute top-2 right-2"
                     />
                   </div>
                   <div className="flex flex-1 flex-col justify-between p-3.5 md:p-4">
