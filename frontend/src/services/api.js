@@ -163,6 +163,43 @@ export const WedangApi = {
     }
   },
 
+  async createDrink(payload) {
+    if (!navigator.onLine) {
+      throw createOfflineError();
+    }
+
+    let response;
+    try {
+      response = await fetch(`${API_BASE_URL}/drinks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    } catch {
+      if (!navigator.onLine) {
+        throw createOfflineError();
+      }
+      throw new Error(
+        `Tidak dapat menjangkau server (${API_BASE_URL}). Pastikan backend aktif.`
+      );
+    }
+
+    let json = null;
+    try {
+      json = await response.json();
+    } catch {
+      // Abaikan jika respons bukan JSON
+    }
+
+    if (!response.ok || !json?.success) {
+      throw new Error(
+        json?.message || `Gagal menyimpan minuman (HTTP ${response.status})`
+      );
+    }
+
+    return json.data;
+  },
+
   clearApiCache() {
     try {
       Object.keys(localStorage).forEach((key) => {

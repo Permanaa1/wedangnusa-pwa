@@ -2,6 +2,7 @@ import express from "express";
 import {
   getAllDrinks,
   getDrinkById,
+  createDrink,
   getAllSpices,
   getSpiceById,
 } from "../controllers/wedangController.js";
@@ -10,6 +11,7 @@ const router = express.Router();
 
 router.get("/drinks", getAllDrinks);
 router.get("/drinks/:id", getDrinkById);
+router.post("/drinks", createDrink);
 router.get("/spices", getAllSpices);
 router.get("/spices/:id", getSpiceById);
 

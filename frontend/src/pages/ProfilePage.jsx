@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Coffee,
   User,
@@ -12,9 +13,12 @@ import {
   ShieldCheck,
   Download,
   Trash2,
+  PlusCircle,
+  ArrowRight,
 } from "lucide-react";
 import { WedangApi } from "../services/api";
 import { useOnlineStatus } from "../hooks/useOnlineStatus";
+import { useSyncQueue } from "../context/SyncQueueContext";
 
 export default function ProfilePage() {
   const isOnline = useOnlineStatus();

@@ -80,16 +80,17 @@ define(['./workbox-1cab10dd'], (function (workbox) { 'use strict';
     "url": "registerSW.js",
     "revision": "3ca0b8505b4bec776b69afdba2768812"
   }, {
-    "url": "index.html",
-    "revision": "0.0vc7kmc8l1o"
+    "url": "/index.html",
+    "revision": "0.dmp0n4rffbg"
   }], {});
   workbox.cleanupOutdatedCaches();
-  workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("index.html"), {
-    allowlist: [/^\/$/]
+  workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("/index.html"), {
+    allowlist: [/^\/$/],
+    denylist: [/^\/api/]
   }));
   workbox.registerRoute(/\/api\//i, new workbox.NetworkFirst({
     "cacheName": "wedangnusa-api-cache",
-    "networkTimeoutSeconds": 5,
+    "networkTimeoutSeconds": 4,
     plugins: [new workbox.CacheableResponsePlugin({
       statuses: [0, 200]
     }), new workbox.ExpirationPlugin({

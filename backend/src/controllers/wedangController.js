@@ -93,6 +93,88 @@ export const getDrinkById = async (req, res) => {
   }
 };
 
+
+// POST /api/drinks (Tambah / usulkan minuman tradisional baru)
+export const createDrink = async (req, res) => {
+  try {
+    const {
+      name,
+      origin,
+      serving_type,
+      category,
+      image_url,
+      description,
+      ingredients,
+      steps,
+      benefits,
+    } = req.body;
+
+    if (!name || !origin || !description) {
+      return res.status(400).json({
+        success: false,
+        message: "Nama minuman, asal daerah, dan deskripsi wajib diisi",
+      });
+    }
+
+    const toArray = (val, fallback) => {
+      if (Array.isArray(val)) {
+        const cleaned = val.map((s) => String(s).trim()).filter(Boolean);
+        return cleaned.length ? cleaned : fallback;
+      }
+      if (typeof val === "string") {
+        const cleaned = val
+          .split(/\r?\n|,/)
+          .map((s) => s.trim())
+          .filter(Boolean);
+        return cleaned.length ? cleaned : fallback;
+      }
+      return fallback;
+    };
+
+    const payload = {
+      name: String(name).trim(),
+      origin: String(origin).trim(),
+      serving_type: String(serving_type || "Hangat").trim(),
+      category: String(category || "Minuman Tradisional").trim(),
+      image_url:
+        String(image_url || "").trim() ||
+        "https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=800&q=80",
+      description: String(description).trim(),
+      ingredients: toArray(ingredients, ["Bahan rempah tradisional sesuai selera"]),
+      steps: toArray(steps, [
+        "Rebus bahan bersama air bersih hingga mendidih dan harum.",
+        "Saring lalu sajikan.",
+      ]),
+      benefits: toArray(benefits, ["Menghangatkan dan menyegarkan tubuh"]),
+    };
+
+    const { data, error } = await supabase
+      .from("drinks")
+      .insert([payload])
+      .select()
+      .single();
+
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: `Supabase Error (${error.code || "DB"}): ${error.message}`,
+        details: error.details || null,
+      });
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: "Minuman tradisional berhasil ditambahkan",
+      data,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: `Server Error: ${err?.message || "Gagal menyimpan data minuman baru"}`,
+    });
+  }
+};
+
 // GET /api/spices (Mendukung ?search=&page=&limit=)
 export const getAllSpices = async (req, res) => {
   try {

@@ -1,8 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Search, MapPin, Flame, Snowflake } from "lucide-react";
+import {
+  Search,
+  MapPin,
+  Flame,
+  Snowflake,
+  PlusCircle,
+} from "lucide-react";
 import { WedangApi } from "../services/api";
 import { useOnlineStatus } from "../hooks/useOnlineStatus";
+import { useSyncQueue } from "../context/SyncQueueContext";
 import Pagination from "../components/Pagination";
 import FavoriteButton from "../components/FavoriteButton";
 import OfflineNotice from "../components/OfflineNotice";
@@ -12,6 +19,7 @@ const ITEMS_PER_PAGE = 6;
 
 export default function DrinksPage() {
   const isOnline = useOnlineStatus();
+  const { pendingCount } = useSyncQueue();
   const [drinks, setDrinks] = useState([]);
   const [search, setSearch] = useState("");
   const [serving, setServing] = useState("Semua");
@@ -74,9 +82,26 @@ export default function DrinksPage() {
       <header className="rounded-b-3xl bg-gradient-to-br from-amber-900 via-amber-800 to-orange-800 text-amber-50 shadow-md">
         <div className="mx-auto max-w-6xl px-5 pt-7 pb-6 md:flex md:items-end md:justify-between md:gap-8 md:px-8 md:py-10">
           <div className="max-w-xl">
-            <p className="text-xs font-semibold tracking-widest text-amber-200 uppercase">
-              WedangNusa
-            </p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-semibold tracking-widest text-amber-200 uppercase">
+                WedangNusa
+              </p>
+
+              {/* Tombol menuju halaman /contribute di layar HP */}
+              <Link
+                to="/contribute"
+                className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-amber-50 ring-1 ring-amber-200/30 transition hover:bg-white/25 md:hidden"
+              >
+                <PlusCircle className="h-3.5 w-3.5 text-amber-200" />
+                <span>Usulkan</span>
+                {pendingCount > 0 && (
+                  <span className="rounded-full bg-amber-300 px-1.5 py-0.2 text-[10px] font-bold text-amber-950">
+                    {pendingCount}
+                  </span>
+                )}
+              </Link>
+            </div>
+
             <h1 className="mt-1 text-2xl font-bold tracking-tight md:text-4xl">
               Minuman Rempah Nusantara
             </h1>
@@ -86,15 +111,31 @@ export default function DrinksPage() {
             </p>
           </div>
 
-          <div className="relative mt-4 w-full md:mt-0 md:max-w-sm">
-            <Search className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-amber-900/60" />
-            <input
-              type="text"
-              value={search}
-              onChange={handleSearchChange}
-              placeholder="Cari wedang uwuh, bandrek, sarabba..."
-              className="w-full rounded-xl bg-white py-2.5 pr-4 pl-10 text-sm text-stone-800 shadow-sm outline-none placeholder:text-stone-400 focus:ring-2 focus:ring-amber-300"
-            />
+          <div className="mt-4 flex w-full flex-col gap-2.5 md:mt-0 md:max-w-sm md:items-end">
+            {/* Tombol menuju halaman /contribute di layar Desktop */}
+            <Link
+              to="/contribute"
+              className="hidden items-center gap-1.5 rounded-full bg-white/15 px-4 py-1.5 text-xs font-semibold text-amber-50 ring-1 ring-amber-200/30 transition hover:bg-white/25 md:inline-flex"
+            >
+              <PlusCircle className="h-4 w-4 text-amber-200" />
+              <span>Usulkan Minuman Baru</span>
+              {pendingCount > 0 && (
+                <span className="rounded-full bg-amber-300 px-1.5 py-0.5 text-[10px] font-bold text-amber-950">
+                  {pendingCount} Pending
+                </span>
+              )}
+            </Link>
+
+            <div className="relative w-full">
+              <Search className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-amber-900/60" />
+              <input
+                type="text"
+                value={search}
+                onChange={handleSearchChange}
+                placeholder="Cari wedang uwuh, bandrek, sarabba..."
+                className="w-full rounded-xl bg-white py-2.5 pr-4 pl-10 text-sm text-stone-800 shadow-sm outline-none placeholder:text-stone-400 focus:ring-2 focus:ring-amber-300"
+              />
+            </div>
           </div>
         </div>
       </header>
